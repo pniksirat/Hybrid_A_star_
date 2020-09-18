@@ -1,7 +1,7 @@
 #include <math.h>
 #include <iostream>
 #include <vector>
-#include "hybrid_breadth_first.h"
+#include "hybrid_A_star.h"
 
 // Initializes HBF
 HBF::HBF() {}
@@ -11,6 +11,8 @@ HBF::~HBF() {}
 int HBF::Heuristic(int gridx, int gridy, vector<int> &goal){
     return sqrt(pow(gridx-goal[0],2)+pow(gridx-goal[0],2));
 }
+
+
 
 int HBF::theta_to_stack_number(double theta){
   // Takes an angle (in radians) and returns which "stack" in the 3D 
@@ -31,13 +33,14 @@ int HBF::idx(double float_num) {
 }
 
 
-vector<HBF::maze_s> HBF::expand(HBF::maze_s &state) {
+vector<HBF::maze_s> HBF::expand(HBF::maze_s &state, vector<int> &goal) {
   int g = state.g;
   double x = state.x;
   double y = state.y;
   double theta = state.theta;
     
   int g2 = g+1;
+  int f2 = g2+Heuristic( state.x, state.y, goal);
   vector<HBF::maze_s> next_states;
 
   for(double delta_i = -35; delta_i < 40; delta_i+=5) {
@@ -99,12 +102,14 @@ HBF::maze_path HBF::search(vector< vector<int> > &grid, vector<double> &start,
     NUM_THETA_CELLS, vector<vector<int>>(grid[0].size(), vector<int>(grid.size())));
   vector<vector<vector<maze_s>>> came_from(
     NUM_THETA_CELLS, vector<vector<maze_s>>(grid[0].size(), vector<maze_s>(grid.size())));
+  
   double theta = start[2];
   int stack = theta_to_stack_number(theta);
   int g = 0;
 
   maze_s state;
-  state.g = g+ Heuristic( start[0], start[1], goal);
+  state.g = g;
+  state.f = g+ Heuristic( start[0], start[1], goal);
   state.x = start[0];
   state.y = start[1];
   state.theta = theta;
@@ -115,6 +120,7 @@ HBF::maze_path HBF::search(vector< vector<int> > &grid, vector<double> &start,
   vector<maze_s> opened = {state};
   bool finished = false;
   while(!opened.empty()) {
+    sort(opened.begin(), opened.end(), less_than_f());
     maze_s current = opened[0]; //grab first elment
     opened.erase(opened.begin()); //pop first element
 
@@ -132,10 +138,11 @@ HBF::maze_path HBF::search(vector< vector<int> > &grid, vector<double> &start,
       return path;
     }
 
-    vector<maze_s> next_state = expand(current);
+    vector<maze_s> next_state = expand(current,goal);
 
     for(int i = 0; i < next_state.size(); ++i) {
-      int g2 = next_state[i].g+ Heuristic(next_state[i].x,next_state[i].y, goal);
+      int g2 = next_state[i].g;
+      int f2 = next_state[i].f;
       double x2 = next_state[i].x;
       double y2 = next_state[i].y;
       double theta2 = next_state[i].theta;
